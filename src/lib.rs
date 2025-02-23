@@ -30,10 +30,10 @@ impl Monotonic for Rp2040Monotonic {
     type Duration = fugit::TimerDurationU64<1_000_000>;
 
     fn now(&mut self) -> Self::Instant {
-        let mut hi0 = self.timer.timerawh.read().bits();
+        let mut hi0 = self.timer.timerawh().read().bits();
         loop {
-            let low = self.timer.timerawl.read().bits();
-            let hi1 = self.timer.timerawh.read().bits();
+            let low = self.timer.timerawl().read().bits();
+            let hi1 = self.timer.timerawh().read().bits();
             if hi0 == hi1 {
                 break Self::Instant::from_ticks((u64::from(hi0) << 32) | u64::from(low));
             }
@@ -43,9 +43,9 @@ impl Monotonic for Rp2040Monotonic {
 
     unsafe fn reset(&mut self) {
         let resets = &*RESETS::ptr();
-        resets.reset.modify(|_, w| w.timer().clear_bit());
-        while resets.reset_done.read().timer().bit_is_clear() {}
-        self.timer.inte.modify(|_, w| w.alarm_0().set_bit());
+        resets.reset().modify(|_, w| w.timer().clear_bit());
+        while resets.reset_done().read().timer().bit_is_clear() {}
+        self.timer.inte().modify(|_, w| w.alarm_0().set_bit());
     }
 
     fn set_compare(&mut self, instant: Self::Instant) {
@@ -60,11 +60,11 @@ impl Monotonic for Rp2040Monotonic {
             _ => 0, // Will overflow or in the past, set the same value as after overflow to not get extra interrupts
         };
 
-        self.timer.alarm0.write(|w| unsafe { w.bits(val as u32) });
+        self.timer.alarm0().write(|w| unsafe { w.bits(val as u32) });
     }
 
     fn clear_compare_flag(&mut self) {
-        self.timer.intr.modify(|_, w| w.alarm_0().bit(true));
+        self.timer.intr().modify(|_, w| w.alarm_0().bit(true));
     }
 
     fn zero() -> Self::Instant {
